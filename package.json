@@ -29,8 +29,17 @@
           "type": "string",
           "default": "/files/${year}/${month}/",
           "description": "Specifies the folder containing the files."
+        },
+        "staticSiteHero.widthCssClasses": {
+          "type": "array",
+          "default": ["full-width", "half-width", "quarter-width"],
+          "description": "Array of strings representing possible CSS Classes for width"
+        },
+        "staticSiteHero.alignmentCssClasses": {
+          "type": "array",
+          "default": ["left", "right"],
+          "description": "Array of strings representing possible CSS Classes for alignment"
         }
-
       }
     },
     "commands": [{

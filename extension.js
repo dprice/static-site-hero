@@ -4,10 +4,18 @@
 // Import the module and reference it with the alias vscode in your code below
 let vscode = require('vscode');
 
+const figureTemplate =
+    "<figure class=\"${figOptions.cssClass}\">\n" +
+    "![${figOptions.altText}](${figOptions.path}${figOptions.imageName})\n" +
+    "<figcaption>\n" +
+    "${figOptions.Caption}\n" +
+    "</figcaption>\n" +
+    "</figure>\n"
+
 let insertText = (value) => {
     let editor = vscode.window.activeTextEditor;
 
-    if(!editor) {
+    if (!editor) {
         vscode.window.showErrorMessage("Can't insert text because no document is open.");
     }
 
@@ -39,6 +47,20 @@ let updateTemplateWithDate = (template) => {
     return template;
 }
 
+exports.updateTemplateWithDate = updateTemplateWithDate;
+
+let fillFigureTemplate = (figOptions) => {
+    figOptions.cssClass = figOptions.cssWidthClass + ' ' + figOptions.cssAlignmentClass;
+
+    let figure = figureTemplate.replace('${figOptions.imageName}', figOptions.imageName);
+    figure = figure.replace("${figOptions.path}", figOptions.path);
+    figure = figure.replace('${figOptions.altText}', figOptions.altText);
+    figure = figure.replace('${figOptions.Caption}', figOptions.figCaption);
+    figure = figure.replace('${figOptions.cssClass}', figOptions.cssClass);
+
+    return figure;
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 function activate(context) {
@@ -50,28 +72,69 @@ function activate(context) {
     let fileLinkDisposable = vscode.commands.registerCommand('extension.insertLink', () => {
         let linkTypeList = ['File', 'Image'];
 
-        vscode.window.showQuickPick(linkTypeList, {placeHolder: 'Link Type'})
-        .then(result => {
-            if(result === 'File') {
-                insertText(
-                    "[Link Text](" +
-                    updateTemplateWithDate(getFileTemplate()) +
-                    ")"
+        vscode.window.showQuickPick(linkTypeList, { placeHolder: 'Link Type' })
+            .then(result => {
+                if (result === 'File') {
+                    insertText(
+                        "[Link Text](" +
+                        updateTemplateWithDate(getFileTemplate()) +
+                        ")"
                     );
-            } else if (result === 'Image') {
-                insertText(
-                    "![alt Text](" +
-                    updateTemplateWithDate(getImageTemplate()) +
-                    ")"
+                } else if (result === 'Image') {
+                    insertText(
+                        "![alt Text](" +
+                        updateTemplateWithDate(getImageTemplate()) +
+                        ")"
                     );
-            }
-        });
+                }
+            });
     });
 
     context.subscriptions.push(fileLinkDisposable);
 
     let figureDisposable = vscode.commands.registerCommand('extension.insertFigure', () => {
-        vscode.window.showInformationMessage('Insert Figure Tag Initiated.');
+        let template = getImageTemplate();
+        template = updateTemplateWithDate(template);
+
+        let cssWidthClassList = vscode.workspace.getConfiguration("staticSiteHero")["widthCssClasses"];
+        let cssAlignmentClassList = vscode.workspace.getConfiguration("staticSiteHero")["alignmentCssClasses"];
+
+        let figOptions = {
+            imageName: '',
+            altText: '',
+            figCaption: '',
+            path: template,
+            cssWidthClass: '',
+            cssAlignmentClass: ''
+        }
+
+        vscode.window.showInputBox({prompt: "Image File Name"})
+            .then(value => {
+                figOptions.imageName = value;
+            })
+            .then(() => {
+                return vscode.window.showInputBox({ prompt: "Figure Caption"})
+                    .then(result => {
+                        figOptions.altText = result;
+                        figOptions.figCaption = result;
+                    });
+            })
+            .then(() => {
+                return vscode.window.showQuickPick(cssWidthClassList, {placeHolder: "Width Class" })
+                    .then(result => {
+                        figOptions.cssWidthClass = result;
+                    })
+            })
+            .then(() => {
+                return vscode.window.showQuickPick(cssAlignmentClassList, {placeHolder: "Alignment Class" })
+                    .then(result => {
+                        figOptions.cssAlignmentClass = result;
+                    })
+            })
+            .then(() => {
+                insertText(fillFigureTemplate(figOptions));
+            });
+
     });
 
     context.subscriptions.push(figureDisposable);
